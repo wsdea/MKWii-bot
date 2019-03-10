@@ -1,10 +1,9 @@
 # Citation: Box Of Hats (https://github.com/Box-Of-Hats )
-
+# -*- coding: utf-8 -*-
 import win32api as wapi
-import time
 
 keyList = ["\b"]
-for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ 123456789,.'£$/\\":
+for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ 123456789,.'$/\\":
     keyList.append(char)
 
 def key_check():

@@ -3,8 +3,10 @@
 import cv2
 import numpy as np
 import win32gui, win32ui, win32con, win32api
+import matplotlib.pyplot as plt
 
-def grab_screen(region=None):
+box = (45,37,912,511)
+def grab_screen(region=box):
 
     hwin = win32gui.GetDesktopWindow()
 
@@ -36,5 +38,10 @@ def grab_screen(region=None):
     win32gui.DeleteObject(bmp.GetHandle())
 
     return cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+
+def im_show(img):
+    plt.figure()
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    plt.imshow(img)
 
 
