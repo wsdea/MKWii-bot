@@ -43,5 +43,12 @@ def im_show(img):
     plt.figure()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     plt.imshow(img)
+    
+def cv2_show(window,img,pos=(0,384+30)):
+    img = cv2.resize(img,(683,384),interpolation=cv2.INTER_NEAREST)
+    cv2.namedWindow(window)        
+    cv2.moveWindow(window, pos[0],pos[1])
+    cv2.imshow(window,img)
+    cv2.waitKey(25)
 
 
