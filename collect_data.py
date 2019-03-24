@@ -1,57 +1,55 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from grabscreen import grab_screen,im_show
+from utils import grab_screen,box,save_pickle
 import cv2
 import time
 from getkeys import key_check
 import os
 
-w = [1,0,0,0,0,0,0,0,0]
-s = [0,1,0,0,0,0,0,0,0]
-a = [0,0,1,0,0,0,0,0,0]
-d = [0,0,0,1,0,0,0,0,0]
-wa = [0,0,0,0,1,0,0,0,0]
-wd = [0,0,0,0,0,1,0,0,0]
-sa = [0,0,0,0,0,0,1,0,0]
-sd = [0,0,0,0,0,0,0,1,0]
-nk = [0,0,0,0,0,0,0,0,1]
+forward        = np.array([1,0,0,0,0,0,0,0,0,0]) #0
+left           = np.array([0,1,0,0,0,0,0,0,0,0]) #1
+right          = np.array([0,0,1,0,0,0,0,0,0,0]) #2
+forward_left   = np.array([0,0,0,1,0,0,0,0,0,0]) #3
+forward_right  = np.array([0,0,0,0,1,0,0,0,0,0]) #4
+backward       = np.array([0,0,0,0,0,1,0,0,0,0]) #5
+backward_left  = np.array([0,0,0,0,0,0,1,0,0,0]) #6
+backward_right = np.array([0,0,0,0,0,0,0,1,0,0]) #7
+item           = np.array([0,0,0,0,0,0,0,0,1,0]) #8
+nokey          = np.array([0,0,0,0,0,0,0,0,0,1]) #9
 
 path = 'D:\MKWii datasets'
 
-
-def keys_to_output(keys):
+def keys_to_onehot(keys):
     '''
     Convert keys to a ...multi-hot... array
-     0  1  2  3  4   5   6   7    8
-    [W, S, A, D, WA, WD, SA, SD, NOKEY] boolean values.
     '''
-    output = [0,0,0,0,0,0,0,0,0]
 
-    if 'W' in keys and 'A' in keys:
-        output = wa
-    elif 'W' in keys and 'D' in keys:
-        output = wd
-    elif 'S' in keys and 'A' in keys:
-        output = sa
-    elif 'S' in keys and 'D' in keys:
-        output = sd
-    elif 'W' in keys:
-        output = w
-    elif 'S' in keys:
-        output = s
-    elif 'A' in keys:
-        output = a
-    elif 'D' in keys:
-        output = d
+    if 'L' in keys: #forward
+        if 'H' in keys:
+            return forward_right
+        elif 'F' in keys:
+            return forward_left
+        else:
+            return forward
+    elif 'P' in keys: #backward/drift
+        if 'H' in keys:
+            return backward_right
+        elif 'F' in keys:
+            return backward_left
+        else:
+            return backward
+    elif 'H' in keys:
+        return right
+    elif 'F' in keys:
+        return left
     else:
-        output = nk
-    return output
+        return nokey
 
 
-def collect_images(path):
+def collect_images(path,R=8):
     file_name = os.path.join(path,'training_data-{}.jpeg')
-    for i in list(range(4))[::-1]:
-        print(i+1)
+    for i in range(3,0,-1):
+        print(i)
         time.sleep(1)
 
     n_images = 0
@@ -59,15 +57,16 @@ def collect_images(path):
     print('STARTING!!!')
     while True:
         if not paused:
-            screen = grab_screen()
-            screen = cv2.cvtColor(screen, cv2.COLOR_BGR2RGB)
+            screen = grab_screen(box)
+            screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            screen = cv2.resize(screen,(0,0), fx=1/R,fy=1/R, interpolation=cv2.INTER_LINEAR)
             cv2.imwrite(file_name.format(int(1000*time.time())),screen)
             n_images += 1
             if n_images % 100 == 0:
                 print(n_images)
                 
         keys = key_check()
-        if 'P' in keys:
+        if 'C' in keys:
             if paused:
                 paused = False
                 print('unpaused!')
@@ -77,7 +76,61 @@ def collect_images(path):
                 paused = True
                 time.sleep(1)
         time.sleep(0.1)
+#    
+        
+def create_datasets(path):
+    for i in range(3,0,-1):
+        print(i)
+        time.sleep(1)
     
+    starting_time = int(time.time())
+    file_name = os.path.join(path,'{}-{}.pkl'.format(starting_time,'{}'))
+    
+    R = 4
+    h,w = round((box[3]-box[1])/R),round((box[2]-box[0])/R)
+    n_datasets = 0
+    dataset_size = 1000
+    n_images = 0
+    training_data = (np.zeros((dataset_size,h,w)),np.zeros((dataset_size,10)))
+    print(training_data[0].shape)
+    print(training_data[1].shape)
+    paused = False
+    print('STARTING!!!')
+    while True:
+        keys = key_check()
+        if 'C' in keys:
+            if paused:
+                paused = False
+                print('unpaused!')
+                time.sleep(1)
+            else:
+                print('Pausing!')
+                paused = True
+                time.sleep(1)
+                
+        if not paused:
+            screen = grab_screen(box)
+            screen = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
+            screen = cv2.resize(screen,(w,h), interpolation=cv2.INTER_LINEAR)
+                 
+            output = keys_to_onehot(keys)
+            training_data[0][n_images] = screen.copy()
+            training_data[1][n_images] = output.copy()
+            n_images += 1
+            
+            if n_images % 100 == 0:
+                print(n_images)
+                
+                if n_images == dataset_size:
+                    save_pickle(training_data,file_name.format(n_datasets))
+                    print('SAVED')
+                    training_data = (np.zeros((dataset_size,h,w)),np.zeros((dataset_size,10)))
+                    n_datasets += 1
+                    n_images = 0
+               
+        
+        time.sleep(0.1)
+        
 #def main(path, starting_value):
 #    file_name = os.path.join(path,'training_data-{}.npy')
 #    starting_value = starting_value
@@ -131,8 +184,7 @@ def collect_images(path):
 #                print('Pausing!')
 #                paused = True
 #                time.sleep(1)
-#
-#
-#main(file_name, starting_value)
 
-collect_images(path)
+
+#collect_images(path)
+create_datasets(path)

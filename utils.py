@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import win32gui, win32ui, win32con, win32api
 import matplotlib.pyplot as plt
+import pickle
+import os,shutil
 
 box = (45,37,912,511)
 def grab_screen(region=box):
@@ -51,4 +53,22 @@ def cv2_show(window,img,pos=(0,384+30)):
     cv2.imshow(window,img)
     cv2.waitKey(25)
 
+def load_pickle(file):
+    with open(file,'rb') as f:
+        return pickle.load(f)
+    
+def save_pickle(x,path):
+    with open(path,'wb') as f:
+        pickle.dump(x,f)
+        
+def remove_content(folder):
+    for file in os.listdir(folder):
+        file_path = os.path.join(folder, file)
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+        elif os.path.isdir(file_path): 
+            shutil.rmtree(file_path) #remove directories in the folder
+
+
+     
 
